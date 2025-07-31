@@ -1,5 +1,3 @@
-
-
 local notes = {
 
 }
@@ -282,7 +280,98 @@ for i,v in ipairs(file:list("FNF/")) do
       song:title(arayData["songDisplayName"])
       song:item(arayData["songIcon"])
       song.leftClick = function (self)
-        startSong(arayData["songDataName"], arayData, v)
+        startSong(arayData["songDataName"], arayData, v, false)
+      end
+    elseif string.find(vs, ".osu") ~= nil then
+      local osu = file:readString("FNF/"..v.."/"..vs)
+      local convertFunkin = {
+        notes = {},
+        events = {},
+        song = "",
+        format = "psych_v1_convert",
+        speed = 2.5,
+        artist = "",
+        icon = "minecraft:nether_star",
+        totalSongTime = 0
+      }
+
+      local lines = {}
+      local allNotes = {}
+      local hitObjects = false
+      local metadata = false
+      for line in osu:gmatch("[^\r\n]+") do
+        if hitObjects == true and line:match("%S") then
+          local noteData = {
+            0,
+            0,
+            0
+          }
+          local xx, yy, timee, typee, hitSoundd, extras = line:match("([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),(.+)")
+          local endTime = tonumber(extras:match("^(%d+)") or "0")
+          local noteX = tonumber(xx)
+          local noteDir = 0
+
+          
+
+          if noteX == 64 then
+            noteDir = 0
+          elseif noteX == 192 then
+            noteDir = 1
+          elseif noteX == 320 then
+            noteDir = 2
+          elseif noteX == 448 then
+            noteDir = 3
+          end
+
+          noteData[1] = timee
+          noteData[2] = noteDir
+          noteData[3] = (endTime - timee)
+
+          table.insert(allNotes,noteData)
+        end
+
+        if metadata == true and line:match("%S") then
+          local key, value = line:match("^(.-):%s*(.*)")
+          if key and value then
+              if key == "Artist" then
+                convertFunkin.artist = value
+              elseif key == "Title" then
+                convertFunkin.song = value
+              end
+          end
+        end
+
+        if line == "[Metadata]" then
+          metadata = true
+          hitObjects = false
+        elseif line == "[Difficulty]" then
+          metadata = false
+          hitObjects = false
+        elseif line == "[HitObjects]" then
+            hitObjects = true
+            metadata = false
+          end
+      end
+
+      table.insert(convertFunkin.notes , {
+        sectionBeats = 4,
+        sectionNotes = allNotes,
+        mustHitSection = false
+      })
+
+      local arayData = {
+        ["songDisplayName"] = convertFunkin["song"],
+        ["songDataName"] = string.gsub(vs, ".osu", ""),
+        ["songIcon"] = convertFunkin["icon"],
+        ["songOwner"] = convertFunkin["artist"],
+        ["songMaxDur"] = tonumber(convertFunkin["totalSongTime"])
+      }
+
+      local song = modPage:newAction()
+      song:title(arayData["songDisplayName"])
+      song:item(arayData["songIcon"])
+      song.leftClick = function (self)
+        startSong(arayData["songDataName"], arayData, v, convertFunkin)
       end
     end
   end
@@ -403,11 +492,15 @@ function stopSong()
   end
 end
 
-function startSong(songName, songData, modData)
+function startSong(songName, songData, modData, isOsu)
   stopSong()
 
   scoreText:setText("Loading...")
-  chartJS = parseJson(file:readString("FNF/"..modData.."/"..songData["songDataName"]..".json"))
+  if isOsu then
+    chartJS = isOsu
+  else
+    chartJS = parseJson(file:readString("FNF/"..modData.."/"..songData["songDataName"]..".json"))
+  end
   for i,v in ipairs(chartJS.notes) do
     for secIndex,secValue in ipairs(v.sectionNotes) do
       if chartJS.format == "psych_v1_convert" then
