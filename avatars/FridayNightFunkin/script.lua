@@ -18,11 +18,6 @@ local chartJS = {}
 local time = 0
 local prevTime = 0
 
-local leftKey = keybinds:newKeybind("Left"):setKey("key.keyboard.left")
-local downKey = keybinds:newKeybind("Down"):setKey("key.keyboard.down")
-local upKey = keybinds:newKeybind("Up"):setKey("key.keyboard.up")
-local rightKey = keybinds:newKeybind("Right"):setKey("key.keyboard.right")
-
 local scoreText = nil
 local ratingText = nil
 
@@ -39,24 +34,86 @@ local oldOpacity = 0
 
 local animTimer = 0
 
+local strumSkin = "fn"
+local animationType = "bf_anims"
+
+local strumsArray = {
+  {
+    strumMember = models[strumSkin].strums.leftST,
+    noteMember = models[strumSkin].notes.left,
+    connectedSus = models[strumSkin].sustains.left,
+    confirmColor = {1, 0.5, 0.65},
+    animations = {
+      animations[strumSkin].pressLeft,
+      animations[strumSkin].pressEndLeft,
+      animations[strumSkin].leftConfirm,
+      animations[strumSkin].pressEndLeft
+    },
+
+    keyName = "Left",
+    keyData = "key.keyboard.left",
+
+  },
+  {
+    strumMember = models[strumSkin].strums.downST,
+    noteMember = models[strumSkin].notes.down,
+    connectedSus = models[strumSkin].sustains.down,
+    confirmColor = {0.65, 0.65, 1},
+    animations = {
+      animations[strumSkin].pressDown,
+      animations[strumSkin].pressEndDown,
+      animations[strumSkin].downConfirm,
+      animations[strumSkin].pressEndDown
+    },
+
+    keyName = "Down",
+    keyData = "key.keyboard.down",
+  },
+  {
+    strumMember = models[strumSkin].strums.upST,
+    noteMember = models[strumSkin].notes.up,
+    connectedSus = models[strumSkin].sustains.up,
+    confirmColor = {0.5, 1, 0.5},
+    animations = {
+      animations[strumSkin].pressUp,
+      animations[strumSkin].pressEndUp,
+      animations[strumSkin].upConfirm,
+      animations[strumSkin].pressEndUp
+    },
+
+    keyName = "Up",
+    keyData = "key.keyboard.up",
+  },
+  {
+    strumMember = models[strumSkin].strums.rightST,
+    noteMember = models[strumSkin].notes.right,
+    connectedSus = models[strumSkin].sustains.right,
+    confirmColor = {1, 0.5, 0.5},
+    animations = {
+      animations[strumSkin].pressRight,
+      animations[strumSkin].pressEndRight,
+      animations[strumSkin].rightConfirm,
+      animations[strumSkin].pressEndRight
+    },
+
+    keyName = "Right",
+    keyData = "key.keyboard.right",
+  },
+}
+
+local characterAnims = {
+  animations[animationType].idle,
+  animations[animationType].left,
+  animations[animationType].down,
+  animations[animationType].up,
+  animations[animationType].right,
+}
+
 function checkKey(keyDir)
-    if keyDir == 0 then
-      animations.fn.pressLeft:stop()
-      animations.fn.pressEndLeft:stop()
-      animations.fn.pressLeft:play()
-    elseif keyDir == 1 then
-      animations.fn.pressDown:stop()
-      animations.fn.pressEndDown:stop()
-      animations.fn.pressDown:play()
-    elseif keyDir == 2 then
-      animations.fn.pressUp:stop()
-      animations.fn.pressEndUp:stop()
-      animations.fn.pressUp:play()
-    elseif keyDir == 3 then
-      animations.fn.pressRight:stop()
-      animations.fn.pressEndRight:stop()
-      animations.fn.pressRight:play()
+    for i,v in ipairs(strumsArray[keyDir + 1].animations) do
+      v:stop()
     end
+    strumsArray[keyDir + 1].animations[1]:play()
 
     for i,v in ipairs(notes) do
       local distance = ( 0.15 * (v[2] - (curTime))) * 0.5
@@ -72,19 +129,9 @@ function checkKey(keyDir)
           table.insert(pressedSus, v[4])
         end
 
-        if v[3] == 0 then
-          local strumTarget = models.fn.strums.leftST
-          setStrumCode(strumTarget, 1, 0.5, 0.65)
-        elseif v[3] == 1 then
-          local strumTarget = models.fn.strums.downST
-          setStrumCode(strumTarget, 0.65, 0.65, 1)
-        elseif v[3] == 2 then
-          local strumTarget = models.fn.strums.upST
-          setStrumCode(strumTarget, 0.5, 1, 0.5)
-        elseif v[3] == 3 then
-          local strumTarget = models.fn.strums.rightST
-          setStrumCode(strumTarget, 1, 0.5, 0.5)
-        end
+        local target = strumsArray[v[3] + 1]
+        setStrumCode(target.strumMember, target.confirmColor[1], target.confirmColor[2], target.confirmColor[3])
+
         if v[4].hasSus == false then
           animTimer = 15
         else
@@ -94,7 +141,8 @@ function checkKey(keyDir)
         playCharAnim(v[3])
         playStrumConfirmAnim(v[3])
 
-        models.fn.notes:removeChild(v[1])
+
+        models[strumSkin].notes:removeChild(v[1])
         table.remove(notes,i)
         break
       end
@@ -102,132 +150,25 @@ function checkKey(keyDir)
 end
 
 function playCharAnim(dir)
-    animations.bf_anims.idle:stop()
-    animations.bf_anims.left:stop()
-    animations.bf_anims.down:stop()
-    animations.bf_anims.up:stop()
-    animations.bf_anims.right:stop()
+    for i,v in ipairs(characterAnims) do
+      v:stop()
+    end
 
-    if dir == 0 then
-      animations.bf_anims.left:play()
-    elseif dir == 1 then
-      animations.bf_anims.down:play()
-    elseif dir == 2 then
-      animations.bf_anims.up:play()
-    elseif dir == 3 then
-      animations.bf_anims.right:play()
-    end 
+    characterAnims[2 + dir]:play()
 end
 
 function setStrumCode(model,color1,color2,color3)
   local strumTarget = model
 
-  strumTarget.cube1:setColor(color1, color2, color3)
-  strumTarget.cube2:setColor(color1, color2, color3)
-  strumTarget.cube3:setColor(color1, color2, color3)
-  strumTarget.cube4:setColor(color1, color2, color3)
+  strumTarget.cube1:setColor(color1, color2, color3) strumTarget.cube2:setColor(color1, color2, color3) strumTarget.cube3:setColor(color1, color2, color3) strumTarget.cube4:setColor(color1, color2, color3)
 end
 
 function playStrumConfirmAnim(dir)
-  animations.fn.pressLeft:stop()
-  animations.fn.pressEndLeft:stop()
-  animations.fn.pressDown:stop()
-  animations.fn.pressEndDown:stop()
-  animations.fn.pressUp:stop()
-  animations.fn.pressEndUp:stop()
-  animations.fn.pressRight:stop()
-  animations.fn.pressEndRight:stop()
-
-  animations.fn.leftConfirm:stop()
-  animations.fn.downConfirm:stop()
-  animations.fn.upConfirm:stop()
-  animations.fn.rightConfirm:stop()
-
-  if dir == 0 then
-    animations.fn.leftConfirm:play()
-  elseif dir == 1 then
-    animations.fn.downConfirm:play()
-  elseif dir == 2 then
-    animations.fn.upConfirm:play()
-  elseif dir == 3 then
-    animations.fn.rightConfirm:play()
+  for i,v in ipairs(strumsArray[dir + 1].animations) do
+    v:stop()
   end
-end
 
-function pings.leftPress()
-  local strumTarget = models.fn.strums.leftST
-
-  setStrumCode(strumTarget, 0.5, 0.5, 0.5)
-
-  checkKey(0)
-end
-
-function pings.downPress()
-  local strumTarget = models.fn.strums.downST
-
-  setStrumCode(strumTarget, 0.5, 0.5, 0.5)
-
-  checkKey(1)
-end
-
-function pings.upPress()
-  local strumTarget = models.fn.strums.upST
-
-  setStrumCode(strumTarget, 0.5, 0.5, 0.5)
-
-  checkKey(2)
-end
-
-function pings.rightPress()
-  local strumTarget = models.fn.strums.rightST
-
-  setStrumCode(strumTarget, 0.5, 0.5, 0.5)
-
-  checkKey(3)
-end
-
-function pings.relLeft()
-    animations.fn.pressLeft:stop()
-    animations.fn.pressEndLeft:stop()
-    animations.fn.leftConfirm:stop()
-    animations.fn.pressEndLeft:play()
-    
-    local strumTarget = models.fn.strums.leftST
-
-    setStrumCode(strumTarget, 1, 1, 1)
-end
-
-function pings.relDown()
-    animations.fn.pressDown:stop()
-    animations.fn.pressEndDown:stop()
-    animations.fn.downConfirm:stop()
-    animations.fn.pressEndDown:play()
-    
-    local strumTarget = models.fn.strums.downST
-    
-    setStrumCode(strumTarget, 1, 1, 1)
-end
-
-function pings.relUp()
-    animations.fn.pressUp:stop()
-    animations.fn.pressEndUp:stop()
-    animations.fn.upConfirm:stop()
-    animations.fn.pressEndUp:play()
-
-    local strumTarget = models.fn.strums.upST
-    
-    setStrumCode(strumTarget, 1, 1, 1)
-end
-
-function pings.relRight()
-    animations.fn.pressRight:stop()
-    animations.fn.pressEndRight:stop()
-    animations.fn.rightConfirm:stop()
-    animations.fn.pressEndRight:play()
-
-    local strumTarget = models.fn.strums.rightST
-    
-    setStrumCode(strumTarget, 1, 1, 1)
+  strumsArray[dir + 1].animations[3]:play()
 end
 
 local mainPage = action_wheel:newPage("Main")
@@ -295,23 +236,13 @@ for i,v in ipairs(file:list("FNF/")) do
         totalSongTime = 0
       }
 
-      local lines = {}
-      local allNotes = {}
-      local hitObjects = false
-      local metadata = false
+      local lines = {} local allNotes = {}
+      local hitObjects = false local metadata = false
       for line in osu:gmatch("[^\r\n]+") do
         if hitObjects == true and line:match("%S") then
-          local noteData = {
-            0,
-            0,
-            0
-          }
+          local noteData = {0,0,0}
           local xx, yy, timee, typee, hitSoundd, extras = line:match("([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),(.+)")
-          local endTime = tonumber(extras:match("^(%d+)") or "0")
-          local noteX = tonumber(xx)
-          local noteDir = 0
-
-          
+          local endTime = tonumber(extras:match("^(%d+)") or "0") local noteX = tonumber(xx) local noteDir = 0
 
           if noteX == 64 then
             noteDir = 0
@@ -379,35 +310,47 @@ end
 
 
 function events.entity_init()
-  models.fn.notes:setPos(0,15,0)
-  models.fn.sustains:setPos(0,15,0)
+  models[strumSkin].notes:setPos(0,15,0)
+  models[strumSkin].sustains:setPos(0,15,0)
 
-  models.fn.notes.left:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.8)
-  models.fn.notes.down:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.8)
-  models.fn.notes.up:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.8)
-  models.fn.notes.right:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.8)
+  for i,v in ipairs(strumsArray) do
+    v.noteMember:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.8)
+  end
 
-  models.fn.sustains.left:setPivot(0,-3,0) 
-  models.fn.sustains.down:setPivot(0,-3,0) 
-  models.fn.sustains.up:setPivot(0,-3,0) 
-  models.fn.sustains.right:setPivot(0,-3,0) 
+  models[strumSkin].sustains.left:setPivot(0,-3,0) 
+  models[strumSkin].sustains.down:setPivot(0,-3,0) 
+  models[strumSkin].sustains.up:setPivot(0,-3,0) 
+  models[strumSkin].sustains.right:setPivot(0,-3,0) 
 
-  models.fn.sustains.left:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
-  models.fn.sustains.down:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
-  models.fn.sustains.up:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
-  models.fn.sustains.right:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
+  models[strumSkin].sustains.left:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
+  models[strumSkin].sustains.down:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
+  models[strumSkin].sustains.up:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
+  models[strumSkin].sustains.right:setVisible(false):setPrimaryRenderType("TRANSLUCENT_CULL"):setOpacity(0.65)
 
-  leftKey.press = pings.leftPress
-  downKey.press = pings.downPress
-  upKey.press = pings.upPress
-  rightKey.press = pings.rightPress
+  for i,v in ipairs(strumsArray) do
+    local newKey = keybinds:newKeybind(v.keyName):setKey(v.keyData)
+    local dir = i-1
 
-  leftKey.release = pings.relLeft
-  downKey.release = pings.relDown
-  upKey.release = pings.relUp
-  rightKey.release = pings.relRight
+    newKey.press = function (modifiers, self)
+      local strumTarget = v.strumMember
 
-  scoreText = models.fn.text:newText("scoreText")
+      setStrumCode(strumTarget, 0.65, 0.65, 0.65)
+
+      checkKey(dir)
+    end
+
+    newKey.release = function (modifiers, self)      
+      local strumTarget = v.strumMember
+
+      for ia,va in ipairs(v.animations) do
+        va:stop()
+      end
+
+      setStrumCode(strumTarget, 1, 1, 1)
+    end
+  end
+
+  scoreText = models[strumSkin].text:newText("scoreText")
 
   scoreText:setText("Select Song...")
         :setPos(0, -15, 0)
@@ -416,7 +359,7 @@ function events.entity_init()
         :setWidth(350)
         :setLight(15, 15)
 
-  ratingText = models.fn.text:newText("ratingText")
+  ratingText = models[strumSkin].text:newText("ratingText")
 
   ratingText:setText('[{"text":"Sick\n","color":"yellow"},{"text":"0","color":"white"}]')
         :setPos(16, 0, 0)
@@ -427,11 +370,11 @@ function events.entity_init()
         :setScale(0.3)
         :setVisible(true)
 
-  models.bf_anims.root:setPrimaryTexture("Skin")
-  models.bf_anims.root.Bodyy.RightArmg.mike:setPrimaryTexture("CUSTOM", textures["mike"])
-  models.bf_anims.root:setPos(0,-30,10)
+  models[animationType].root:setPrimaryTexture("Skin")
+  models[animationType].root.Bodyy.RightArmg.mike:setPrimaryTexture("CUSTOM", textures["mike"])
+  models[animationType].root:setPos(0,-30,10)
 
-  animations.bf_anims.idle:play()
+  animations[animationType].idle:play()
 
   vanilla_model.PLAYER:setVisible(false)
 end
@@ -463,8 +406,8 @@ function stopSong()
     isSongStarted = false
 
     for i,v in ipairs(notes) do
-      models.fn.notes:removeChild(v[1])
-      if v[4].hasSus == true then models.fn.sustains:removeChild(v[4].main) end
+      models[strumSkin].notes:removeChild(v[1])
+      if v[4].hasSus == true then models[strumSkin].sustains:removeChild(v[4].main) end
       table.remove(notes,i)
     end 
 
@@ -482,9 +425,9 @@ function stopSong()
     if inst then inst:stop() end
 
     for i,v in ipairs(notes) do
-      models.fn.notes:removeChild(v[1])
+      models[strumSkin].notes:removeChild(v[1])
       if v[4].hasSus == true then
-        models.fn.sustains:removeChild(v[4].main)
+        models[strumSkin].sustains:removeChild(v[4].main)
       end
       table.remove(notes,i)
     end 
@@ -515,6 +458,7 @@ function startSong(songName, songData, modData, isOsu)
     end
   end
   inst = sounds:playSound(songName, player:getPos(), 1, 1, false)
+  
   isSongStarted = true
 
   updateScore()
@@ -536,12 +480,10 @@ if isSongStarted == true then prevTime = time time = time + (1 / 20) end
   end
 
   if animTimer == 0 then
-    animations.bf_anims.idle:stop()
-    animations.bf_anims.left:stop()
-    animations.bf_anims.down:stop()
-    animations.bf_anims.up:stop()
-    animations.bf_anims.right:stop()
-    animations.bf_anims.idle:play()
+    for i,v in ipairs(characterAnims) do
+      v:stop()
+    end
+    characterAnims[1]:play()
     animTimer = 15
   end
   
@@ -570,9 +512,9 @@ function events.render(delta, context)
       local distance =  (v[2] - (curTime))
 
       if distance < 800 then
-        models.fn.notes:addChild(v[1])
+        models[strumSkin].notes:addChild(v[1])
 
-        if v[4].hasSus == true then models.fn.sustains:addChild(v[4].main) v[4].main:setVisible(true) end
+        if v[4].hasSus == true then models[strumSkin].sustains:addChild(v[4].main) v[4].main:setVisible(true) end
 
         table.insert(notes, v)
 
@@ -594,7 +536,11 @@ function events.render(delta, context)
       vs.main:setPos(0, distance2 * -1, 0)
       vs.main:setScale(1, 1 + targetScaleY, 1)
 
-      if distance3 < 0 then models.fn.sustains:removeChild(vs.main) table.remove(pressedSus, i) end
+      if distance3 < 0 then 
+      models[strumSkin].sustains:removeChild(vs.main) table.remove(pressedSus, i) 
+      strumsArray[vs.dir + 1].animations[1]:play()
+      setStrumCode(strumsArray[vs.dir + 1].strumMember, 0.65,0.65,0.65)
+      end
     end
 
     for i,v in ipairs(notes) do
@@ -614,7 +560,7 @@ function events.render(delta, context)
         v[4].main:setPos(0, distance2 * -1, 0)
         v[4].main:setScale(1, 1 + targetScaleY, 1)
 
-        if distance3 < 0 then pings.onSustainFinish(v) models.fn.sustains:removeChild(v[4].main) end
+        if distance3 < 0 then pings.onSustainFinish(v) models[strumSkin].sustains:removeChild(v[4].main) end
       end
 
       if distance < -10 then
@@ -629,9 +575,9 @@ function events.render(delta, context)
 
         pings.onMissNote(v)
 
-        if v[4].hasSus == true then models.fn.sustains:removeChild(v[4].main) end
+        if v[4].hasSus == true then models[strumSkin].sustains:removeChild(v[4].main) end
         
-        models.fn.notes:removeChild(v[1])
+        models[strumSkin].notes:removeChild(v[1])
         table.remove(notes,i)
       end
     end
@@ -643,19 +589,12 @@ function createSusNote(stTimee, susLenn, dir)
     main = nil,
     susLen = susLenn,
     strumTime = stTimee,
-    hasSus = false
+    hasSus = false,
+    dir = dir
   }
 
   if susLenn > 0 then
-    if dir == 0 then
-      data.main = models.fn.sustains.left:copy("susNote"..#notes)
-    elseif dir == 1 then
-      data.main = models.fn.sustains.down:copy("susNote"..#notes)
-    elseif dir == 2 then
-      data.main = models.fn.sustains.up:copy("susNote"..#notes)
-    elseif dir == 3 then
-      data.main = models.fn.sustains.right:copy("susNote"..#notes)
-    end
+    data.main = strumsArray[dir + 1].connectedSus:copy("susNote"..#notes)
     data.hasSus = true
   end
 
@@ -663,18 +602,9 @@ function createSusNote(stTimee, susLenn, dir)
 end
 
 function addNote(stTime,dir,susTime)
-  local note = nil
-  local connectedSus = nil
+  local note = nil local connectedSus = nil
 
-  if dir == 0 then
-    note = models.fn.notes.left:copy("note"..#notes)
-  elseif dir == 1 then
-    note = models.fn.notes.down:copy("note"..#notes)
-  elseif dir == 2 then
-    note = models.fn.notes.up:copy("note"..#notes)
-  elseif dir == 3 then
-    note = models.fn.notes.right:copy("note"..#notes)
-  end
+  note = strumsArray[dir + 1].noteMember:copy("note"..#notes)
 
   connectedSus = createSusNote(stTime, susTime, dir)
 
@@ -691,14 +621,8 @@ end
 
 function judgeNote(judgeTime)
     local absTime = math.abs(judgeTime)
-
-    if absTime >= -5 and absTime < 65 then
-        return "sick"
-    elseif absTime >= 65 and absTime < 90 then
-        return "good"
-    elseif absTime >= 150 and absTime < 195 then
-        return "bad"
-    else
-        return "none"
-    end
+    if absTime >= -5 and absTime < 65 then return "sick"
+    elseif absTime >= 65 and absTime < 90 then return "good"
+    elseif absTime >= 150 and absTime < 195 then return "bad"
+    else return "none" end
 end
